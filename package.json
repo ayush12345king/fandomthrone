@@ -1,0 +1,13 @@
+{
+  "name": "fandomthrone",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fandom Throne: fans pay to put their favourite on top of a live leaderboard.",
+  "scripts": {
+    "dev": "LOCAL_DEV=1 PAYMENT_PROVIDER=dev node dev-server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

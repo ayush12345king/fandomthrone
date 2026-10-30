@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/styles.css">
+<meta name="theme-color" content="#15172B">
+<title>Fandom Throne: pay to put your fandom on top</title>
+<meta name="description" content="Seven live leaderboards: IPL, cricketers, K-pop, anime, football, Bollywood and F1. The rank is whatever fans have paid. No votes, no algorithm.">
+<meta property="og:title" content="Fandom Throne">
+<meta property="og:description" content="The rank is whatever fans have paid. Put your fave on #1.">
+<meta property="og:image" content="/og.png">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="logo" href="/"><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#F2B705" d="M3 10l6.5 5L16 5l6.5 10L29 10l-3 15H6L3 10z"/><rect x="6" y="26.5" width="20" height="3" rx="1" fill="currentColor"/></svg>Fandom Throne</a>
+    <nav><a href="#how" class="hide-sm">How it works</a><a href="#live">Live bids</a></nav>
+  </header>
+  <section class="hero">
+    <h1>Pay to put your fandom on top.</h1>
+    <p>Seven leaderboards, ranked only by what fans have paid. No votes, no algorithm. Anyone can knock your favourite off #1, so keep an eye on it.</p>
+    <div class="stats" id="stats"></div>
+  </section>
+  <section class="rail" aria-label="Boards and their current #1">
+    <div class="banners" id="banners"></div>
+  </section>
+  <section class="two">
+    <div id="live"><h2>Live bids</h2><div id="feed"><p class="empty">Loading bids…</p></div></div>
+    <div id="how"><h2>How it works</h2>
+      <ol class="steps">
+        <li><div><b>Pick a board and a name</b><span>IPL teams, K-pop groups, anime characters and more. Missing someone? Add them.</span></div></li>
+        <li><div><b>Pay to push them up</b><span>Totals add up, so a whole fandom can back the same name together.</span></div></li>
+        <li><div><b>Share it and defend it</b><span>You get a share card. Rivals can outbid you at any time, so tell your fandom.</span></div></li>
+      </ol>
+      <p class="fine" style="margin-top:14px">You pay for visibility on a public leaderboard. There are no prizes and no refunds.</p>
+    </div>
+  </section>
+</div>
+<footer><div class="wrap"><span>Fan-made. Not linked to any team, league, artist, studio or brand. Names are used only to identify who fans are backing.</span><nav><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="mailto:hello@fandomthrone.com">Contact</a></nav></div></footer>
+<script type="module">
+import { config, getJSON, money, esc, feedHTML, CROWN } from '/app.js';
+let first = true;
+async function load() {
+  try {
+    await config();
+    const d = await getJSON('/api/overview');
+    document.getElementById('stats').innerHTML = d.stats.bids
+      ? `<span><b>${money(d.stats.raised)}</b> paid by fans</span><span><b>${d.stats.bids.toLocaleString()}</b> bids</span>` : '';
+    document.getElementById('banners').innerHTML = d.boards.map((b, i) => `
+      <a class="banner${first ? ' drop' : ''}" href="/b/${b.id}" style="--c:${b.color};--i:${b.ink};animation-delay:${i * 70}ms" data-ink="${b.ink}">
+        <div><span class="bn">${esc(b.name)}</span><div class="crown">${CROWN}</div>
+          <div class="king">${esc(b.leader.name)}</div>
+          <div class="amt">${b.leader.total ? money(b.leader.total) : 'Unclaimed'}<small>${b.leader.total ? 'paid by fans' : 'first bid takes it'}</small></div></div>
+        <span class="go">See the board</span>
+      </a>`).join('');
+    document.getElementById('feed').innerHTML = feedHTML(d.feed.slice(0, 15), true);
+    first = false;
+  } catch (e) { document.getElementById('feed').innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
+}
+load();
+setInterval(() => { if (!document.hidden) load(); }, 10000);
+</script>
+</body>
+</html>

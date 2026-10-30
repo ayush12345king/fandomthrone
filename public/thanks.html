@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/styles.css">
+<meta name="theme-color" content="#15172B">
+<meta name="robots" content="noindex">
+<title>Your bid is in | Fandom Throne</title>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="logo" href="/"><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#F2B705" d="M3 10l6.5 5L16 5l6.5 10L29 10l-3 15H6L3 10z"/><rect x="6" y="26.5" width="20" height="3" rx="1" fill="currentColor"/></svg>Fandom Throne</a>
+    <nav><a href="/">All boards</a></nav>
+  </header>
+  <main class="thanks">
+    <section id="msg"><h1>Confirming your payment…</h1><p>This takes a few seconds.</p></section>
+    <section><canvas id="card" width="1080" height="1350" aria-label="Share card" hidden></canvas></section>
+  </main>
+</div>
+<script type="module">
+import { config, getJSON, money, esc } from '/app.js';
+const q = new URLSearchParams(location.search);
+const ref = q.get('sid') ? `sid=${encodeURIComponent(q.get('sid'))}` : `pid=${encodeURIComponent(q.get('pid') || '')}`;
+const $msg = document.getElementById('msg');
+
+async function fetchResult(tries = 8) {
+  for (let i = 0; i < tries; i++) {
+    try { return await getJSON(`/api/confirm?${ref}`); }
+    catch (e) { if (i === tries - 1) throw e; await new Promise((r) => setTimeout(r, 1500)); }
+  }
+}
+
+function wrap(ctx, text, max) {
+  const words = text.split(' '); const lines = []; let line = '';
+  for (const w of words) {
+    const t = line ? line + ' ' + w : w;
+    if (ctx.measureText(t).width > max && line) { lines.push(line); line = w; } else line = t;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+async function drawCard(r, cfg) {
+  const c = document.getElementById('card');
+  const ctx = c.getContext('2d');
+  try { await Promise.all([document.fonts.load('900 100px "Big Shoulders Display"'), document.fonts.load('600 40px "Familjen Grotesk"')]); } catch {}
+  const D = '"Big Shoulders Display", Impact, sans-serif', B = '"Familjen Grotesk", system-ui, sans-serif';
+  const light = r.color === '#F26B1D';
+  const ink = light ? '#15172B' : '#FFFFFF';
+  ctx.fillStyle = '#E8EAF0'; ctx.fillRect(0, 0, 1080, 1350);
+  ctx.fillStyle = '#15172B'; ctx.fillRect(60, 60, 960, 14);
+  // pennant
+  ctx.fillStyle = r.color;
+  ctx.beginPath(); ctx.moveTo(110, 96); ctx.lineTo(970, 96); ctx.lineTo(970, 1150); ctx.lineTo(540, 1060); ctx.lineTo(110, 1150); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#15172B'; ctx.fillRect(536, 74, 8, 22);
+  ctx.fillStyle = ink; ctx.font = `600 40px ${B}`; ctx.fillText(r.boardName, 170, 190);
+  // crown
+  ctx.fillStyle = '#F2B705';
+  ctx.save(); ctx.translate(170, 230); ctx.scale(3.4, 3.4);
+  ctx.fill(new Path2D('M3 10l6.5 5L16 5l6.5 10L29 10l-3 15H6L3 10z')); ctx.fillRect(6, 26.5, 20, 3); ctx.restore();
+  ctx.fillStyle = ink; ctx.font = `900 64px ${D}`;
+  ctx.fillText(r.rank === 1 ? 'ON THE THRONE' : `NOW #${r.rank}`, 170, 410);
+  let size = 170; ctx.font = `900 ${size}px ${D}`;
+  let lines = wrap(ctx, r.name.toUpperCase(), 740);
+  while ((lines.length > 3 || lines.some((l) => ctx.measureText(l).width > 740)) && size > 70) { size -= 10; ctx.font = `900 ${size}px ${D}`; lines = wrap(ctx, r.name.toUpperCase(), 740); }
+  let y = 420 + size * .9;
+  lines.forEach((l) => { ctx.fillText(l, 170, y); y += size * .9; });
+  ctx.font = `600 40px ${B}`;
+  y += 30; ctx.fillText(`${money(r.amount, cfg)} from ${r.backer}`, 170, y);
+  if (r.message) { ctx.font = `italic 500 34px ${B}`; wrap(ctx, `“${r.message}”`, 740).slice(0, 2).forEach((l) => { y += 50; ctx.fillText(l, 170, y); }); }
+  ctx.fillStyle = '#15172B'; ctx.font = `900 64px ${D}`; ctx.fillText('YOUR MOVE.', 110, 1250);
+  ctx.font = `600 34px ${B}`; ctx.fillStyle = '#5B5F7A'; ctx.fillText(`${location.host}/b/${r.board}`, 110, 1300);
+  c.hidden = false;
+  return c;
+}
+
+try {
+  const cfg = await config();
+  const r = await fetchResult();
+  const url = `${location.origin}/b/${r.board}`;
+  const text = r.rank === 1
+    ? `I just put ${r.name} on the throne of ${r.boardName} 👑${r.dethroned ? ` Sorry, ${r.dethroned} fans.` : ''} Your move:`
+    : `I just pushed ${r.name} to #${r.rank} in ${r.boardName}. Help me take the throne:`;
+  $msg.innerHTML = `
+    <h1>${r.rank === 1 ? `${esc(r.name)} is on the throne.` : `${esc(r.name)} is now #${r.rank}.`}</h1>
+    <p>You added ${money(r.amount, cfg)}. ${esc(r.name)} has ${money(r.total, cfg)} in total on ${esc(r.boardName)}.${r.dethroned ? ` You knocked ${esc(r.dethroned)} off #1.` : ''}</p>
+    <p>Rivals can outbid you at any time. Share it so your fandom can help hold the spot.</p>
+    <div class="share">
+      <a class="btn" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}">Post on X</a>
+      <a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}">Send on WhatsApp</a>
+      <button class="btn gold" id="sharebtn" type="button">Share image</button>
+      <a class="btn ghost" href="/b/${encodeURIComponent(r.board)}">Back to the board</a>
+    </div>`;
+  const canvas = await drawCard(r, cfg);
+  document.getElementById('sharebtn').onclick = () => canvas.toBlob(async (blob) => {
+    const file = new File([blob], `fandomthrone-${r.board}.png`, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], text: `${text} ${url}` }); return; } catch {}
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
+  });
+} catch (e) {
+  $msg.innerHTML = `<h1>We couldn't confirm your payment yet.</h1><p>${esc(e.message)}</p><p>If you were charged, your bid will appear within a minute. Refresh this page, or email hello@fandomthrone.com with your payment receipt.</p>`;
+}
+</script>
+</body>
+</html>

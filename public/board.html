@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/styles.css">
+<meta name="theme-color" content="#15172B">
+<title>Fandom Throne</title>
+<meta name="description" content="A live leaderboard ranked only by what fans have paid. Put your fave on #1.">
+<meta property="og:title" content="Fandom Throne">
+<meta property="og:image" content="/og.png">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+<div class="band" id="band">
+  <div class="wrap">
+    <header class="top">
+      <a class="logo" href="/"><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#F2B705" d="M3 10l6.5 5L16 5l6.5 10L29 10l-3 15H6L3 10z"/><rect x="6" y="26.5" width="20" height="3" rx="1" fill="currentColor"/></svg>Fandom Throne</a>
+      <nav><a href="/">All boards</a></nav>
+    </header>
+    <div class="boardhead">
+      <div><h1 id="bname">Loading…</h1><p id="bblurb"></p></div>
+      <div class="tabs" role="group" aria-label="Time period">
+        <button type="button" data-p="all" aria-pressed="true">All time</button>
+        <button type="button" data-p="week" aria-pressed="false">This week</button>
+      </div>
+    </div>
+    <section class="throne" id="throne" aria-live="polite"></section>
+  </div>
+</div>
+<div class="wrap board-body">
+  <section>
+    <h2 class="sr">Leaderboard</h2>
+    <ol class="rows" id="rows"></ol>
+    <div class="add"><button class="btn ghost" id="addbtn" type="button">Add someone who's missing</button></div>
+  </section>
+  <aside class="aside"><h2>Latest bids</h2><div id="feed"></div></aside>
+</div>
+<footer><div class="wrap"><span>Fan-made. Not linked to any team, league, artist, studio or brand. Names are used only to identify who fans are backing.</span><nav><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="mailto:hello@fandomthrone.com">Contact</a></nav></div></footer>
+<script type="module">
+import { config, getJSON, money, esc, feedHTML, openBid, CROWN } from '/app.js';
+const id = location.pathname.split('/').filter(Boolean).pop();
+let period = 'all', data = null;
+const key = () => (period === 'week' ? 'week' : 'total');
+
+async function load() {
+  await config();
+  try { data = await getJSON(`/api/board?id=${encodeURIComponent(id)}&period=${period}`); }
+  catch (e) { document.getElementById('bname').textContent = e.message; return; }
+  const b = data.board, k = key(), top = data.rows[0], lead = top ? top[k] : 0;
+  document.title = `${top && lead ? top.name + ' rules ' : ''}${b.name} | Fandom Throne`;
+  const band = document.getElementById('band');
+  band.style.setProperty('--board', b.color);
+  band.style.setProperty('--board-ink', b.ink);
+  band.dataset.ink = b.ink;
+  document.querySelector('meta[name=theme-color]').content = b.color;
+  document.getElementById('bname').textContent = b.name;
+  document.getElementById('bblurb').textContent = b.blurb;
+
+  let meta;
+  if (lead) {
+    meta = (top.topBacker ? `Biggest backer: ${esc(top.topBacker)} (${money(top.topBackerAmount)}).` : '')
+      + (top.lastMsg ? ` Latest message: <q>${esc(top.lastMsg)}</q> from ${esc(top.lastBacker)}.` : '');
+  } else {
+    meta = period === 'week' ? 'Nobody has bid this week. The first bid takes the weekly throne.' : 'Nobody has bid yet. The first bid takes the throne.';
+  }
+  document.getElementById('throne').innerHTML = top ? `
+    <div><div class="crown">${CROWN}</div><p class="king">${esc(top.name)}</p><p class="meta">${meta}</p></div>
+    <div class="amt">${money(lead)}<small>${period === 'week' ? 'paid this week' : 'paid by fans'}</small>
+      <p style="margin:14px 0 0"><button class="btn gold" type="button" data-back="${esc(top.id)}">Back ${esc(top.name)}</button></p></div>` : '';
+
+  document.getElementById('rows').innerHTML = data.rows.slice(1).map((r) => `
+    <li class="row"><span class="rk">${r.rank}</span>
+      <span class="nm">${esc(r.name)}${r.lastMsg ? `<small>“${esc(r.lastMsg)}” from ${esc(r.lastBacker)}</small>` : ''}</span>
+      <span class="tot">${money(r[k])}<small>${money(lead - r[k] + 1)} to take #1</small></span>
+      <button class="btn small" type="button" data-back="${esc(r.id)}">Back</button></li>`).join('');
+  document.getElementById('feed').innerHTML = feedHTML(data.feed.slice(0, 12), false);
+}
+
+// Bidding always works on all-time totals (that is what decides the main throne).
+function allTimeRank(c) {
+  const sorted = data.rows.slice().sort((a, b) => b.total - a.total);
+  return sorted.indexOf(c) + 1;
+}
+const leaderTotal = () => Math.max(0, ...data.rows.map((r) => r.total));
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-back]');
+  if (!t || !data) return;
+  const c = data.rows.find((r) => r.id === t.dataset.back);
+  if (c) openBid({ board: data.board, contender: { ...c, rank: allTimeRank(c) }, leaderTotal: leaderTotal() });
+});
+document.getElementById('addbtn').onclick = () => data && openBid({ board: data.board, isNew: true, leaderTotal: leaderTotal() });
+document.querySelectorAll('.tabs button').forEach((btn) => {
+  btn.onclick = () => {
+    period = btn.dataset.p;
+    document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-pressed', String(x === btn)));
+    load();
+  };
+});
+load();
+setInterval(() => { if (!document.hidden && !document.querySelector('dialog[open]')) load(); }, 8000);
+</script>
+</body>
+</html>
