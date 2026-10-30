@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.svg">
 <link rel="stylesheet" href="/styles.css">
-<meta name="theme-color" content="#15172B">
+<meta name="theme-color" content="#121428">
 <title>Fandom Throne: pay to put your fandom on top</title>
 <meta name="description" content="Seven live leaderboards: IPL, cricketers, K-pop, anime, football, Bollywood and F1. The rank is whatever fans have paid. No votes, no algorithm.">
 <meta property="og:title" content="Fandom Throne">
@@ -14,22 +14,53 @@
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
+<div class="ticker" id="ticker" aria-label="Latest bids"></div>
 <div class="wrap">
   <header class="top">
     <a class="logo" href="/"><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#F2B705" d="M3 10l6.5 5L16 5l6.5 10L29 10l-3 15H6L3 10z"/><rect x="6" y="26.5" width="20" height="3" rx="1" fill="currentColor"/></svg>Fandom Throne</a>
-    <nav><a href="#how" class="hide-sm">How it works</a><a href="#live">Live bids</a></nav>
+    <nav><a href="#boards">Boards</a><a href="#rivalries" class="hide-sm">Rivalries</a><a href="#live" class="hide-sm">Live bids</a></nav>
   </header>
+
   <section class="hero">
-    <h1>Pay to put your fandom on top.</h1>
-    <p>Seven leaderboards, ranked only by what fans have paid. No votes, no algorithm. Anyone can knock your favourite off #1, so keep an eye on it.</p>
-    <div class="stats" id="stats"></div>
+    <div>
+      <h1>Pay to put your fandom <span class="stroke">on top.</span></h1>
+      <p>Seven leaderboards ranked only by what fans have paid. No votes, no algorithm. Anyone can knock your favourite off #1, so keep an eye on it.</p>
+      <div class="cta"><a class="btn gold" href="#boards">Pick your fandom</a><a class="btn ghost" href="#rivalries">See the rivalries</a></div>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="stage" id="stage" aria-live="polite">
+      <div class="stage-top"><span id="st-board" class="board-name"></span><span class="live">Live</span></div>
+      <div class="stage-body" id="st-body"></div>
+      <div class="stage-foot"><div class="dots" id="st-dots" role="group" aria-label="Choose a board"></div><a class="btn white small" id="st-go" href="#">See the board</a></div>
+    </div>
   </section>
-  <section class="rail" aria-label="Boards and their current #1">
-    <div class="banners" id="banners"></div>
-  </section>
-  <section class="two">
-    <div id="live"><h2>Live bids</h2><div id="feed"><p class="empty">Loading bids…</p></div></div>
-    <div id="how"><h2>How it works</h2>
+</div>
+
+<section class="sec" id="boards">
+  <div class="wrap">
+    <div class="sec-head"><h2>The thrones</h2><p>Each banner shows who rules that board right now. Open one to back a name or add someone missing.</p></div>
+    <div class="rail"><div class="banners" id="banners"></div></div>
+  </div>
+</section>
+
+<section class="sec dark" id="rivalries">
+  <div class="wrap">
+    <div class="sec-head"><h2>Rivalries</h2><p>The oldest arguments in each fandom, settled by the only number that counts here.</p></div>
+    <div class="rivals" id="rivals"></div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-head"><h2>Record book</h2></div>
+    <div class="records" id="records"></div>
+  </div>
+</section>
+
+<section class="sec" id="live" style="padding-top:0">
+  <div class="wrap two">
+    <div><h2 style="margin-bottom:16px">Live bids</h2><div id="feed"><p class="empty">Loading bids…</p></div></div>
+    <div><h2 style="margin-bottom:16px">How it works</h2>
       <ol class="steps">
         <li><div><b>Pick a board and a name</b><span>IPL teams, K-pop groups, anime characters and more. Missing someone? Add them.</span></div></li>
         <li><div><b>Pay to push them up</b><span>Totals add up, so a whole fandom can back the same name together.</span></div></li>
@@ -37,29 +68,106 @@
       </ol>
       <p class="fine" style="margin-top:14px">You pay for visibility on a public leaderboard. There are no prizes and no refunds.</p>
     </div>
-  </section>
-</div>
+  </div>
+</section>
+
 <footer><div class="wrap"><span>Fan-made. Not linked to any team, league, artist, studio or brand. Names are used only to identify who fans are backing.</span><nav><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="mailto:hello@fandomthrone.com">Contact</a></nav></div></footer>
+
 <script type="module">
-import { config, getJSON, money, esc, feedHTML, CROWN } from '/app.js';
-let first = true;
-// Shrink names whose longest word would not fit the banner width.
+import { config, getJSON, money, esc, feedHTML, CROWN, crest, countUp, renderTicker, announceNew, span, reduceMotion, barColor, shortName } from '/app.js';
+
+// Shrink names whose longest word would not fit a banner.
 const fit = (name) => Math.min(30, Math.floor(118 / (Math.max(...name.split(/\s+/).map((w) => w.length)) * 0.47)));
+const fitR = (name) => Math.min(26, Math.floor(110 / (Math.max(...name.split(/\s+/).map((w) => w.length)) * 0.5)));
+let data = null, spot = 0, first = true, timer = null;
+
+function drawStage() {
+  if (!data) return;
+  const b = data.boards[spot];
+  const st = document.getElementById('stage');
+  st.style.setProperty('--c', b.color);
+  st.style.setProperty('--i', b.ink);
+  st.dataset.ink = b.ink;
+  document.getElementById('st-board').textContent = `Now ruling ${b.name}`;
+  const L = b.leader;
+  document.getElementById('st-body').innerHTML = `
+    <div class="stage-crest swap"><div class="crown">${CROWN}</div>${crest(L, 170)}</div>
+    <div class="swap" style="animation-delay:.08s">
+      <div class="king">${esc(L.name)}</div>
+      <div class="amt">${L.total ? money(L.total) : 'Unclaimed'}</div>
+      <div class="reign">${L.total ? (b.reignSince ? `On the throne for ${span(Date.now() - b.reignSince)}` : 'Paid by fans') : 'The first bid takes this throne.'}</div>
+    </div>`;
+  document.getElementById('st-go').href = `/b/${b.id}`;
+  document.getElementById('st-go').textContent = `Open ${b.short}`;
+  document.querySelectorAll('#st-dots button').forEach((d, i) => d.setAttribute('aria-current', String(i === spot)));
+}
+function startCycle() {
+  clearInterval(timer);
+  if (reduceMotion) return;
+  timer = setInterval(() => { spot = (spot + 1) % data.boards.length; drawStage(); }, 4500);
+}
+
+function draw() {
+  const d = data;
+  renderTicker(document.getElementById('ticker'), d.feed, d.boards);
+  document.getElementById('stats').innerHTML = `<span><b id="s-raised">$0</b>paid by fans</span><span><b id="s-bids">0</b>bids</span><span><b>${d.boards.length}</b>thrones</span>`;
+  countUp(document.getElementById('s-raised'), d.stats.raised);
+  countUp(document.getElementById('s-bids'), d.stats.bids, (n) => Math.round(n).toLocaleString());
+
+  if (!document.getElementById('st-dots').children.length) {
+    document.getElementById('st-dots').innerHTML = d.boards.map((b, i) => `<button type="button" aria-label="${esc(b.name)}" data-i="${i}"></button>`).join('');
+    document.getElementById('st-dots').onclick = (e) => { const i = e.target.dataset.i; if (i !== undefined) { spot = Number(i); drawStage(); startCycle(); } };
+  }
+  drawStage();
+
+  document.getElementById('banners').innerHTML = d.boards.map((b, i) => {
+    const L = b.leader, nxt = b.top[1];
+    return `<a class="banner${first ? ' drop' : ''}" href="/b/${b.id}" style="--c:${b.color};--i:${b.ink};animation-delay:${i * 80}ms" data-ink="${b.ink}">
+      <span class="bn">${esc(b.name)}</span>
+      <div class="bcrest"><div class="crown">${CROWN}</div>${crest(L, 64)}</div>
+      <div class="king" style="--fs:${fit(L.name)}px">${esc(L.name)}</div>
+      <div class="amt">${L.total ? money(L.total) : 'Unclaimed'}<small>${L.total ? 'paid by fans' : 'first bid takes it'}</small></div>
+      <div class="next">${nxt ? `Next: ${esc(nxt.name)}, ${money(L.total - nxt.total + 1)} behind` : 'Nobody close yet'}</div>
+      <span class="go">Open the board</span>
+    </a>`;
+  }).join('');
+
+  // One featured rivalry per board keeps the section short.
+  const seen = new Set();
+  document.getElementById('rivals').innerHTML = d.rivalries.filter((r) => !seen.has(r.board) && seen.add(r.board)).map((r) => {
+    const sum = r.a.total + r.b.total;
+    const pa = sum ? Math.round((r.a.total / sum) * 100) : 50;
+    return `<article class="rival">
+      <span class="rb">${esc(r.boardName)}</span>
+      <div class="vs">
+        <div class="side">${crest(r.a, 58)}<div class="nm" style="font-size:${fitR(r.a.name)}px">${esc(r.a.name)}<small>${money(r.a.total)}</small></div></div>
+        <span class="x">VS</span>
+        <div class="side">${crest(r.b, 58)}<div class="nm" style="font-size:${fitR(r.b.name)}px">${esc(r.b.name)}<small>${money(r.b.total)}</small></div></div>
+      </div>
+      <div class="tug" role="img" aria-label="${esc(r.a.name)} ${pa}%, ${esc(r.b.name)} ${100 - pa}%"><span style="flex-basis:${pa}%;background:${barColor(r.a)}"></span><span style="flex-basis:${100 - pa}%;background:${barColor(r.b)}"></span></div>
+      <div class="acts"><a class="btn small gold" href="/b/${r.board}?back=${r.a.id}">Back ${esc(shortName(r.a))}</a><a class="btn small white" href="/b/${r.board}?back=${r.b.id}">Back ${esc(shortName(r.b))}</a></div>
+    </article>`;
+  }).join('');
+
+  const richest = d.boards.slice().sort((a, b) => b.total - a.total)[0];
+  const rec = d.record;
+  document.getElementById('records').innerHTML = `
+    <div class="rec" style="--c:#F2B705"><b>${rec ? money(rec.amount) : '—'}</b><span>${rec ? `Biggest single bid, by ${esc(rec.backer)} on ${esc(rec.name)} (${esc(rec.boardName)})` : 'Biggest single bid. Nobody has set it yet.'}</span></div>
+    <div class="rec" style="--c:${richest.color}"><b>${richest.total ? esc(richest.short) : '—'}</b><span>${richest.total ? `Most-funded board, with ${money(richest.total)} from fans` : 'Most-funded board. Still up for grabs.'}</span></div>
+    <div class="rec" style="--c:#E5368B"><b>${d.feed[0] ? esc(d.feed[0].backer) : '—'}</b><span>${d.feed[0] ? `Latest bidder: ${money(d.feed[0].amount)} on ${esc(d.feed[0].name)}` : 'Latest bidder. Could be you.'}</span></div>`;
+
+  document.getElementById('feed').innerHTML = feedHTML(d.feed.slice(0, 12), true);
+  announceNew(d.feed);
+  first = false;
+}
+
 async function load() {
   try {
     await config();
-    const d = await getJSON('/api/overview');
-    document.getElementById('stats').innerHTML = d.stats.bids
-      ? `<span><b>${money(d.stats.raised)}</b> paid by fans</span><span><b>${d.stats.bids.toLocaleString()}</b> bids</span>` : '';
-    document.getElementById('banners').innerHTML = d.boards.map((b, i) => `
-      <a class="banner${first ? ' drop' : ''}" href="/b/${b.id}" style="--c:${b.color};--i:${b.ink};animation-delay:${i * 70}ms" data-ink="${b.ink}">
-        <div><span class="bn">${esc(b.name)}</span><div class="crown">${CROWN}</div>
-          <div class="king" style="--fs:${fit(b.leader.name)}px">${esc(b.leader.name)}</div>
-          <div class="amt">${b.leader.total ? money(b.leader.total) : 'Unclaimed'}<small>${b.leader.total ? 'paid by fans' : 'first bid takes it'}</small></div></div>
-        <span class="go">See the board</span>
-      </a>`).join('');
-    document.getElementById('feed').innerHTML = feedHTML(d.feed.slice(0, 15), true);
-    first = false;
+    data = await getJSON('/api/overview');
+    if (spot === 0 && first) { const best = data.boards.reduce((m, b, i) => (b.leader.total > data.boards[m].leader.total ? i : m), 0); spot = best; }
+    draw();
+    if (!timer) startCycle();
   } catch (e) { document.getElementById('feed').innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
 }
 load();

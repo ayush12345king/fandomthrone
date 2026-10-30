@@ -21,7 +21,7 @@
   </main>
 </div>
 <script type="module">
-import { config, getJSON, money, esc } from '/app.js';
+import { config, getJSON, money, esc, crest, confetti } from '/app.js';
 const q = new URLSearchParams(location.search);
 const ref = q.get('sid') ? `sid=${encodeURIComponent(q.get('sid'))}` : `pid=${encodeURIComponent(q.get('pid') || '')}`;
 const $msg = document.getElementById('msg');
@@ -57,15 +57,21 @@ async function drawCard(r, cfg) {
   ctx.beginPath(); ctx.moveTo(110, 96); ctx.lineTo(970, 96); ctx.lineTo(970, 1150); ctx.lineTo(540, 1060); ctx.lineTo(110, 1150); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#15172B'; ctx.fillRect(536, 74, 8, 22);
   ctx.fillStyle = ink; ctx.font = `600 40px ${B}`; ctx.fillText(r.boardName, 170, 190);
-  // crown
+  // crest (+ crown) for the backed name
+  try {
+    const svg = crest(r, 150).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+    const img = new Image();
+    await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+    ctx.drawImage(img, 790, 150, 150, 180);
+  } catch {}
   ctx.fillStyle = '#F2B705';
   ctx.save(); ctx.translate(170, 230); ctx.scale(3.4, 3.4);
   ctx.fill(new Path2D('M3 10l6.5 5L16 5l6.5 10L29 10l-3 15H6L3 10z')); ctx.fillRect(6, 26.5, 20, 3); ctx.restore();
   ctx.fillStyle = ink; ctx.font = `900 64px ${D}`;
   ctx.fillText(r.rank === 1 ? 'ON THE THRONE' : `NOW #${r.rank}`, 170, 410);
   let size = 170; ctx.font = `900 ${size}px ${D}`;
-  let lines = wrap(ctx, r.name.toUpperCase(), 740);
-  while ((lines.length > 3 || lines.some((l) => ctx.measureText(l).width > 740)) && size > 70) { size -= 10; ctx.font = `900 ${size}px ${D}`; lines = wrap(ctx, r.name.toUpperCase(), 740); }
+  let lines = wrap(ctx, r.name.toUpperCase(), 600);
+  while ((lines.length > 3 || lines.some((l) => ctx.measureText(l).width > 600)) && size > 70) { size -= 10; ctx.font = `900 ${size}px ${D}`; lines = wrap(ctx, r.name.toUpperCase(), 600); }
   let y = 420 + size * .9;
   lines.forEach((l) => { ctx.fillText(l, 170, y); y += size * .9; });
   ctx.font = `600 40px ${B}`;
@@ -88,12 +94,13 @@ try {
     <h1>${r.rank === 1 ? `${esc(r.name)} is on the throne.` : `${esc(r.name)} is now #${r.rank}.`}</h1>
     <p>You added ${money(r.amount, cfg)}. ${esc(r.name)} has ${money(r.total, cfg)} in total on ${esc(r.boardName)}.${r.dethroned ? ` You knocked ${esc(r.dethroned)} off #1.` : ''}</p>
     <p>Rivals can outbid you at any time. Share it so your fandom can help hold the spot.</p>
-    <div class="share">
+    <div class="share-actions">
       <a class="btn" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}">Post on X</a>
       <a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}">Send on WhatsApp</a>
       <button class="btn gold" id="sharebtn" type="button">Share image</button>
       <a class="btn ghost" href="/b/${encodeURIComponent(r.board)}">Back to the board</a>
     </div>`;
+  confetti([r.c1 || '#F2B705', r.c2 || '#E5368B', '#F2B705', r.color]);
   const canvas = await drawCard(r, cfg);
   document.getElementById('sharebtn').onclick = () => canvas.toBlob(async (blob) => {
     const file = new File([blob], `fandomthrone-${r.board}.png`, { type: 'image/png' });
