@@ -54,7 +54,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .banner .bn { font: 600 15px/1.2 var(--body); opacity: .85; }
 .banner .crown { width: 34px; height: 34px; color: var(--gold); margin: 14px 0 6px; }
 .banner[data-ink="#F2B705"] .crown { color: #fff; }
-.banner .king { font: 900 clamp(24px, 2.4vw, 32px)/.95 var(--display); overflow-wrap: break-word; }
+.banner .king { font: 900 clamp(22px, 2.2vw, 28px)/.95 var(--display); overflow-wrap: break-word; hyphens: auto; }
 .banner .amt { font: 800 22px/1 var(--display); margin-top: 14px; }
 .banner .amt small { display: block; font: 500 13px/1.3 var(--body); opacity: .8; margin-top: 4px; }
 .banner .go { font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
@@ -98,7 +98,7 @@ footer nav { display: flex; gap: 16px; }
 .throne { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; padding: 40px 0 44px; }
 .throne .crown { width: 54px; height: 54px; color: var(--gold); }
 .band[data-ink="#F2B705"] .throne .crown { color: #fff; }
-.throne .king { font: 900 clamp(56px, 11vw, 150px)/.86 var(--display); margin: 8px 0 0; overflow-wrap: anywhere; }
+.throne .king { font: 900 clamp(56px, 11vw, 150px)/.9 var(--display); margin: 8px 0 0; padding-bottom: .12em; overflow-wrap: break-word; hyphens: auto; }
 .throne .meta { margin-top: 16px; font-size: 16px; opacity: .92; max-width: 60ch; }
 .throne .meta q { font-style: italic; }
 .throne .amt { font: 900 clamp(40px, 6vw, 72px)/1 var(--display); text-align: right; }
