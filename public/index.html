@@ -43,6 +43,8 @@
 <script type="module">
 import { config, getJSON, money, esc, feedHTML, CROWN } from '/app.js';
 let first = true;
+// Shrink names whose longest word would not fit the banner width.
+const fit = (name) => Math.min(30, Math.floor(118 / (Math.max(...name.split(/\s+/).map((w) => w.length)) * 0.47)));
 async function load() {
   try {
     await config();
@@ -52,7 +54,7 @@ async function load() {
     document.getElementById('banners').innerHTML = d.boards.map((b, i) => `
       <a class="banner${first ? ' drop' : ''}" href="/b/${b.id}" style="--c:${b.color};--i:${b.ink};animation-delay:${i * 70}ms" data-ink="${b.ink}">
         <div><span class="bn">${esc(b.name)}</span><div class="crown">${CROWN}</div>
-          <div class="king">${esc(b.leader.name)}</div>
+          <div class="king" style="--fs:${fit(b.leader.name)}px">${esc(b.leader.name)}</div>
           <div class="amt">${b.leader.total ? money(b.leader.total) : 'Unclaimed'}<small>${b.leader.total ? 'paid by fans' : 'first bid takes it'}</small></div></div>
         <span class="go">See the board</span>
       </a>`).join('');
