@@ -250,7 +250,12 @@ export async function openBid({ board, contender, leaderTotal, isNew }) {
     try {
       const out = await getJSON('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (out.url) { location.href = out.url; return; }
-      if (out.provider === 'razorpay') await razorpayPay(out, body);
+      if (out.provider === 'razorpay') {
+        // Our dialog sits in the browser's top layer; close it so Razorpay's window is clickable.
+        d.close();
+        try { await razorpayPay(out, body); }
+        catch (err) { d.showModal(); throw err; }
+      }
     } catch (err) {
       $('#bd-err').textContent = err.message; pay.disabled = false; sync();
     }
