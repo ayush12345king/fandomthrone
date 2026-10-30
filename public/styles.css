@@ -142,7 +142,7 @@ h2 { font: 900 clamp(38px, 4.4vw, 60px)/.95 var(--display); margin: 0; }
 .rival .nm { font: 800 24px/1 var(--display); min-width: 0; overflow-wrap: break-word; }
 .rival .nm small { display: block; font: 600 15px/1.3 var(--body); color: var(--gold); margin-top: 5px; }
 .rival .x { font: 900 30px/1 var(--display); color: var(--gold); transform: skewX(-10deg); margin-top: 22px; }
-.tug { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: #2A2E55; }
+.tug { display: flex; gap: 3px; height: 14px; border-radius: 7px; overflow: hidden; background: #2A2E55; }
 .tug span { transition: flex-basis 1s cubic-bezier(.3, 1.2, .4, 1); }
 .rival .acts { display: flex; gap: 8px; justify-content: space-between; }
 .rival .acts .btn { flex: 1; font-size: 14px; padding: 9px 10px; }

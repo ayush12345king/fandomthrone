@@ -88,8 +88,8 @@ function drawStage() {
   st.style.setProperty('--c', b.color);
   st.style.setProperty('--i', b.ink);
   st.dataset.ink = b.ink;
-  document.getElementById('st-board').textContent = `Now ruling ${b.name}`;
   const L = b.leader;
+  document.getElementById('st-board').textContent = L.total ? `Now ruling ${b.name}` : `Up for grabs: ${b.name}`;
   document.getElementById('st-body').innerHTML = `
     <div class="stage-crest swap"><div class="crown">${CROWN}</div>${crest(L, 170)}</div>
     <div class="swap" style="animation-delay:.08s">
