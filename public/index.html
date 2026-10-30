@@ -61,7 +61,7 @@ async function load() {
   } catch (e) { document.getElementById('feed').innerHTML = '<p class="err">' + esc(e.message) + '</p>'; }
 }
 load();
-setInterval(() => { if (!document.hidden) load(); }, 10000);
+setInterval(() => { if (!document.hidden) load(); }, 20000);
 </script>
 </body>
 </html>

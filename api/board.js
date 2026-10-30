@@ -6,6 +6,6 @@ export default async function handler(req, res) {
   try {
     const data = await readBoard(q.get('id'), q.get('period'));
     if (!data) return send(res, 404, { error: 'This board does not exist.' });
-    send(res, 200, data, 'public, s-maxage=3, stale-while-revalidate=10');
+    send(res, 200, data, 'public, s-maxage=10, stale-while-revalidate=30');
   } catch (e) { send(res, 500, { error: e.message }); }
 }
