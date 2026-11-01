@@ -13,7 +13,7 @@
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
-<div class="ticker" id="ticker" aria-label="Latest bids on this board"></div>
+<div class="ticker" id="ticker" aria-label="Latest shoutouts on this board"></div>
 <div class="band" id="band">
   <div class="wrap">
     <header class="top">
@@ -41,7 +41,7 @@
   </section>
   <aside class="aside">
     <section><h2>Top fans</h2><div id="fans"></div></section>
-    <section><h2>Latest bids</h2><div id="feed"></div></section>
+    <section><h2>Latest shoutouts</h2><div id="feed"></div></section>
   </aside>
 </div>
 <footer><div class="wrap"><span>Fan-made. Not linked to any team, league, artist, studio or brand. Names are used only to identify who fans are backing.</span><nav><a href="/terms">Terms</a><a href="/refund">Refunds</a><a href="/shipping">Delivery</a><a href="/privacy">Privacy</a><a href="/contact">Contact</a></nav></div></footer>
@@ -84,9 +84,9 @@ async function load() {
   if (top && top.topBacker) pills.push(`<span class="pill">Biggest backer: ${esc(top.topBacker)}</span>`);
   const meta = lead
     ? (top.lastMsg ? `Latest message: <q>${esc(top.lastMsg)}</q> from ${esc(top.lastBacker)}.` : 'Paid for by fans. Anyone can take it.')
-    : (period === 'week' ? 'Nobody has bid this week. The first bid takes the weekly throne.' : 'Nobody has bid yet. The first bid takes the throne.');
+    : (period === 'week' ? 'Nobody has backed anyone this week. The first shoutout takes the weekly throne.' : 'Nobody has backed anyone yet. The first shoutout takes the throne.');
   const url = `${location.origin}/b/${b.id}`;
-  const text = lead ? `${top.name} rules ${b.name} on Fandom Throne with ${money(lead)}. Who's taking it?` : `The ${b.name} throne on Fandom Throne is unclaimed. First bid takes it.`;
+  const text = lead ? `${top.name} rules ${b.name} on Fandom Throne with ${money(lead)}. Who's taking it?` : `The ${b.name} throne on Fandom Throne is unclaimed. The first shoutout takes it.`;
   document.getElementById('throne').innerHTML = top ? `
     <div class="throne-crest"><div class="crown${changed ? ' dropin' : ''}">${CROWN}</div>${crest(top, 190)}</div>
     <div><p class="king">${esc(top.name)}</p><p class="meta">${meta}</p><div class="pills">${pills.join('')}</div></div>

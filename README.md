@@ -18,7 +18,11 @@ npm run dev        # http://localhost:3000, in-memory database, fake payments
 
 | Name | Value |
 |---|---|
-| `PAYMENT_PROVIDER` | `stripe` or `razorpay` |
+| `PAYMENT_PROVIDER` | `dodo` (default), `stripe` or `razorpay` |
+| `DODO_API_KEY` | Dodo API key (Developer → API keys) |
+| `DODO_ENV` | `test` or `live` |
+| `DODO_PRODUCT_INR` / `DODO_PRODUCT_USD` | ids of two "Pay What You Want" products, one priced in INR and one in USD |
+| `DODO_WEBHOOK_SECRET` | `whsec_…` from Developer → Webhooks (endpoint `/api/webhook-dodo`, event `payment.succeeded`) |
 | `CURRENCY` | `USD` (Stripe) or `INR` (Razorpay) |
 | `MIN_BID` | optional, e.g. `1` for USD, `20` for INR |
 | `SITE_URL` | `https://your-domain.com` |

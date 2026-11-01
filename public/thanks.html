@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/styles.css">
 <meta name="theme-color" content="#15172B">
 <meta name="robots" content="noindex">
-<title>Your bid is in | Fandom Throne</title>
+<title>Your shoutout is live | Fandom Throne</title>
 </head>
 <body>
 <div class="wrap">
@@ -21,15 +21,19 @@
   </main>
 </div>
 <script type="module">
-import { config, getJSON, money, esc, crest, confetti } from '/app.js';
+import { config, getJSON, money, esc, crest, confetti, paidText } from '/app.js';
 const q = new URLSearchParams(location.search);
-const ref = q.get('sid') ? `sid=${encodeURIComponent(q.get('sid'))}` : `pid=${encodeURIComponent(q.get('pid') || '')}`;
+const ref = q.get('ref') ? `ref=${encodeURIComponent(q.get('ref'))}&payment_id=${encodeURIComponent(q.get('payment_id') || '')}&status=${encodeURIComponent(q.get('status') || '')}`
+  : q.get('sid') ? `sid=${encodeURIComponent(q.get('sid'))}` : `pid=${encodeURIComponent(q.get('pid') || '')}`;
 const $msg = document.getElementById('msg');
 
 async function fetchResult(tries = 8) {
   for (let i = 0; i < tries; i++) {
     try { return await getJSON(`/api/confirm?${ref}`); }
-    catch (e) { if (i === tries - 1) throw e; await new Promise((r) => setTimeout(r, 1500)); }
+    catch (e) {
+      if (i === tries - 1 || /did not go through|expired/.test(e.message)) throw e;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
   }
 }
 
@@ -75,7 +79,7 @@ async function drawCard(r, cfg) {
   let y = 420 + size * .9;
   lines.forEach((l) => { ctx.fillText(l, 170, y); y += size * .9; });
   ctx.font = `600 40px ${B}`;
-  y += 30; ctx.fillText(`${money(r.amount, cfg)} from ${r.backer}`, 170, y);
+  y += 30; ctx.fillText(`${paidText(r)} from ${r.backer}`, 170, y);
   if (r.message) { ctx.font = `italic 500 34px ${B}`; wrap(ctx, `“${r.message}”`, 740).slice(0, 2).forEach((l) => { y += 50; ctx.fillText(l, 170, y); }); }
   ctx.fillStyle = '#15172B'; ctx.font = `900 64px ${D}`; ctx.fillText('YOUR MOVE.', 110, 1250);
   ctx.font = `600 34px ${B}`; ctx.fillStyle = '#5B5F7A'; ctx.fillText(`${location.host}/b/${r.board}`, 110, 1300);
@@ -92,8 +96,8 @@ try {
     : `I just pushed ${r.name} to #${r.rank} in ${r.boardName}. Help me take the throne:`;
   $msg.innerHTML = `
     <h1>${r.rank === 1 ? `${esc(r.name)} is on the throne.` : `${esc(r.name)} is now #${r.rank}.`}</h1>
-    <p>You added ${money(r.amount, cfg)}. ${esc(r.name)} has ${money(r.total, cfg)} in total on ${esc(r.boardName)}.${r.dethroned ? ` You knocked ${esc(r.dethroned)} off #1.` : ''}</p>
-    <p>Rivals can outbid you at any time. Share it so your fandom can help hold the spot.</p>
+    <p>You added ${paidText(r)}. ${esc(r.name)} has ${money(r.total, cfg)} in total on ${esc(r.boardName)}.${r.dethroned ? ` You knocked ${esc(r.dethroned)} off #1.` : ''}</p>
+    <p>Rivals can top you at any time. Share it so your fandom can help hold the spot.</p>
     <div class="share-actions">
       <a class="btn" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}">Post on X</a>
       <a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}">Send on WhatsApp</a>
@@ -110,7 +114,7 @@ try {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
   });
 } catch (e) {
-  $msg.innerHTML = `<h1>We couldn't confirm your payment yet.</h1><p>${esc(e.message)}</p><p>If you were charged, your bid will appear within a minute. Refresh this page, or email ayushbathamachhalda@gmail.com with your payment receipt.</p>`;
+  $msg.innerHTML = `<h1>We couldn't confirm your payment yet.</h1><p>${esc(e.message)}</p><p>If you were charged, your shoutout will appear within a minute. Refresh this page, or email ayushbathamachhalda@gmail.com with your payment receipt.</p>`;
 }
 </script>
 </body>

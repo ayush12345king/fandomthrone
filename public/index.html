@@ -14,11 +14,11 @@
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
-<div class="ticker" id="ticker" aria-label="Latest bids"></div>
+<div class="ticker" id="ticker" aria-label="Latest shoutouts"></div>
 <div class="wrap">
   <header class="top">
     <a class="logo" href="/"><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#F2B705" d="M3 10l6.5 5L16 5l6.5 10L29 10l-3 15H6L3 10z"/><rect x="6" y="26.5" width="20" height="3" rx="1" fill="currentColor"/></svg>Fandom Throne</a>
-    <nav><a href="#boards">Boards</a><a href="#rivalries" class="hide-sm">Rivalries</a><a href="#live" class="hide-sm">Live bids</a></nav>
+    <nav><a href="#boards">Boards</a><a href="#rivalries" class="hide-sm">Rivalries</a><a href="#live" class="hide-sm">Live shoutouts</a></nav>
   </header>
 
   <section class="hero">
@@ -59,12 +59,12 @@
 
 <section class="sec" id="live" style="padding-top:0">
   <div class="wrap two">
-    <div><h2 style="margin-bottom:16px">Live bids</h2><div id="feed"><p class="empty">Loading bids…</p></div></div>
+    <div><h2 style="margin-bottom:16px">Live shoutouts</h2><div id="feed"><p class="empty">Loading shoutouts…</p></div></div>
     <div><h2 style="margin-bottom:16px">How it works</h2>
       <ol class="steps">
         <li><div><b>Pick a board and a name</b><span>IPL teams, K-pop groups, anime characters and more. Missing someone? Add them.</span></div></li>
         <li><div><b>Pay to push them up</b><span>Totals add up, so a whole fandom can back the same name together.</span></div></li>
-        <li><div><b>Share it and defend it</b><span>You get a share card. Rivals can outbid you at any time, so tell your fandom.</span></div></li>
+        <li><div><b>Share it and defend it</b><span>You get a share card. Rivals can top you at any time, so tell your fandom.</span></div></li>
       </ol>
       <p class="fine" style="margin-top:14px">You pay for visibility on a public leaderboard. There are no prizes and no refunds.</p>
     </div>
@@ -95,7 +95,7 @@ function drawStage() {
     <div class="swap" style="animation-delay:.08s">
       <div class="king">${esc(L.name)}</div>
       <div class="amt">${L.total ? money(L.total) : 'Unclaimed'}</div>
-      <div class="reign">${L.total ? (b.reignSince ? `On the throne for ${span(Date.now() - b.reignSince)}` : 'Paid by fans') : 'The first bid takes this throne.'}</div>
+      <div class="reign">${L.total ? (b.reignSince ? `On the throne for ${span(Date.now() - b.reignSince)}` : 'Paid by fans') : 'The first shoutout takes this throne.'}</div>
     </div>`;
   document.getElementById('st-go').href = `/b/${b.id}`;
   document.getElementById('st-go').textContent = `Open ${b.short}`;
@@ -110,7 +110,7 @@ function startCycle() {
 function draw() {
   const d = data;
   renderTicker(document.getElementById('ticker'), d.feed, d.boards);
-  document.getElementById('stats').innerHTML = `<span><b id="s-raised">$0</b>paid by fans</span><span><b id="s-bids">0</b>bids</span><span><b>${d.boards.length}</b>thrones</span>`;
+  document.getElementById('stats').innerHTML = `<span><b id="s-raised">$0</b>paid by fans</span><span><b id="s-bids">0</b>shoutouts</span><span><b>${d.boards.length}</b>thrones</span>`;
   countUp(document.getElementById('s-raised'), d.stats.raised);
   countUp(document.getElementById('s-bids'), d.stats.bids, (n) => Math.round(n).toLocaleString());
 
@@ -126,7 +126,7 @@ function draw() {
       <span class="bn">${esc(b.name)}</span>
       <div class="bcrest"><div class="crown">${CROWN}</div>${crest(L, 64)}</div>
       <div class="king" style="--fs:${fit(L.name)}px">${esc(L.name)}</div>
-      <div class="amt">${L.total ? money(L.total) : 'Unclaimed'}<small>${L.total ? 'paid by fans' : 'first bid takes it'}</small></div>
+      <div class="amt">${L.total ? money(L.total) : 'Unclaimed'}<small>${L.total ? 'paid by fans' : 'first shoutout takes it'}</small></div>
       <div class="next">${nxt ? `Next: ${esc(nxt.name)}, ${money(L.total - nxt.total + 1)} behind` : 'Nobody close yet'}</div>
       <span class="go">Open the board</span>
     </a>`;
@@ -152,9 +152,9 @@ function draw() {
   const richest = d.boards.slice().sort((a, b) => b.total - a.total)[0];
   const rec = d.record;
   document.getElementById('records').innerHTML = `
-    <div class="rec" style="--c:#F2B705"><b>${rec ? money(rec.amount) : '—'}</b><span>${rec ? `Biggest single bid, by ${esc(rec.backer)} on ${esc(rec.name)} (${esc(rec.boardName)})` : 'Biggest single bid. Nobody has set it yet.'}</span></div>
+    <div class="rec" style="--c:#F2B705"><b>${rec ? money(rec.amount) : '—'}</b><span>${rec ? `Biggest single shoutout, by ${esc(rec.backer)} on ${esc(rec.name)} (${esc(rec.boardName)})` : 'Biggest single shoutout. Nobody has set it yet.'}</span></div>
     <div class="rec" style="--c:${richest.color}"><b>${richest.total ? esc(richest.short) : '—'}</b><span>${richest.total ? `Most-funded board, with ${money(richest.total)} from fans` : 'Most-funded board. Still up for grabs.'}</span></div>
-    <div class="rec" style="--c:#E5368B"><b>${d.feed[0] ? esc(d.feed[0].backer) : '—'}</b><span>${d.feed[0] ? `Latest bidder: ${money(d.feed[0].amount)} on ${esc(d.feed[0].name)}` : 'Latest bidder. Could be you.'}</span></div>`;
+    <div class="rec" style="--c:#E5368B"><b>${d.feed[0] ? esc(d.feed[0].backer) : '—'}</b><span>${d.feed[0] ? `Latest backer: ${money(d.feed[0].amount)} on ${esc(d.feed[0].name)}` : 'Latest backer. Could be you.'}</span></div>`;
 
   document.getElementById('feed').innerHTML = feedHTML(d.feed.slice(0, 12), true);
   announceNew(d.feed);

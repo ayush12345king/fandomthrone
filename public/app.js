@@ -4,7 +4,11 @@ export const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').match
 
 let CFG = null;
 export async function config() {
-  if (!CFG) CFG = await getJSON('/api/config');
+  if (!CFG) {
+    let cur = null;
+    try { cur = localStorage.getItem('ft_cur'); } catch {}
+    CFG = await getJSON('/api/config' + (cur ? `?cur=${cur}` : ''));
+  }
   return CFG;
 }
 export async function getJSON(url, opts) {
@@ -14,10 +18,28 @@ export async function getJSON(url, opts) {
   return j;
 }
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-export function money(n, cfg = CFG) {
-  const loc = cfg && cfg.currency === 'INR' ? 'en-IN' : 'en-US';
-  return (cfg ? cfg.symbol : '$') + Math.round(Number(n || 0)).toLocaleString(loc);
+// Format an amount that is already in a currency.
+export function fmtIn(amount, currency) {
+  const n = Number(amount || 0);
+  if (currency === 'INR') return '₹' + Math.round(n).toLocaleString('en-IN');
+  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: n >= 100 ? 0 : 2, minimumFractionDigits: 0 });
 }
+// Leaderboard totals are points (1 point = ₹1); show them in the visitor's currency.
+export function money(points, cfg = CFG) {
+  if (cfg && cfg.currency === 'USD') return fmtIn(Number(points || 0) / cfg.rate, 'USD');
+  return fmtIn(points, 'INR');
+}
+// Points needed, converted to a whole amount in the visitor's currency (rounded up).
+export function pointsToCash(points, cfg = CFG) {
+  return cfg && cfg.currency === 'USD' ? Math.ceil(points / cfg.rate) : Math.ceil(points);
+}
+// What a fan actually paid, in the currency they paid in (older entries fall back to points).
+export const paidText = (e) => (e.paid && e.currency ? fmtIn(e.paid, e.currency) : money(e.amount));
+export async function switchCurrency(cur) {
+  try { localStorage.setItem('ft_cur', cur); } catch {}
+  location.reload();
+}
+
 export function ago(t) {
   const s = Math.max(1, Math.round((Date.now() - t) / 1000));
   if (s < 60) return s + 's ago';
@@ -128,20 +150,20 @@ export function confetti(colors = ['#F2B705', '#E5368B', '#1E7A46', '#0B4F9C', '
 export function renderTicker(el, items, boards) {
   let html;
   if (items.length) {
-    html = items.slice(0, 16).map((e) => `<span class="tk">${crest(e, 18)}<b>${esc(e.backer)}</b> put ${money(e.amount)} on <b>${esc(e.name)}</b>${e.tookThrone ? ' <em>took #1</em>' : ''}</span>`).join('');
+    html = items.slice(0, 16).map((e) => `<span class="tk">${crest(e, 18)}<b>${esc(e.backer)}</b> put ${paidText(e)} on <b>${esc(e.name)}</b>${e.tookThrone ? ' <em>took #1</em>' : ''}</span>`).join('');
   } else {
-    html = (boards || []).map((b) => `<span class="tk"><b>${esc(b.name)}</b> throne is unclaimed. The first bid takes it.</span>`).join('');
+    html = (boards || []).map((b) => `<span class="tk"><b>${esc(b.name)}</b> throne is unclaimed. The first shoutout takes it.</span>`).join('');
   }
   if (!html) return;
   el.innerHTML = `<div class="tk-track">${html}${html}</div>`;
 }
 
 export function feedHTML(items, showBoard) {
-  if (!items.length) return '<p class="empty">No bids yet. The first one takes the throne.</p>';
+  if (!items.length) return '<p class="empty">No shoutouts yet. The first one takes the throne.</p>';
   return '<ul class="feed">' + items.map((e) => `
     <li>
       ${crest(e, 30)}
-      <span class="what"><b>${esc(e.backer)}</b> put ${money(e.amount)} on <b>${esc(e.name)}</b>${showBoard ? ` in ${esc(e.boardName)}` : ''}${e.tookThrone ? `<span class="crowned">${e.dethroned ? 'took #1 from ' + esc(e.dethroned) : 'took #1'}</span>` : ''}
+      <span class="what"><b>${esc(e.backer)}</b> put ${paidText(e)} on <b>${esc(e.name)}</b>${showBoard ? ` in ${esc(e.boardName)}` : ''}${e.tookThrone ? `<span class="crowned">${e.dethroned ? 'took #1 from ' + esc(e.dethroned) : 'took #1'}</span>` : ''}
         ${e.message ? `<span class="msg">“${esc(e.message)}”</span>` : ''}</span>
       <span class="when">${ago(e.at)}</span>
     </li>`).join('') + '</ul>';
@@ -154,7 +176,7 @@ export function announceNew(feed) {
   const newest = feed[0].at;
   if (lastSeen !== null) {
     feed.filter((e) => e.at > lastSeen).slice(0, 3).reverse().forEach((e) => {
-      toast(`${crest(e, 34)}<span><b>${esc(e.backer)}</b> just put ${money(e.amount)} on <b>${esc(e.name)}</b>${e.tookThrone ? '. New #1!' : ''}</span>`, e.color);
+      toast(`${crest(e, 34)}<span><b>${esc(e.backer)}</b> just put ${paidText(e)} on <b>${esc(e.name)}</b>${e.tookThrone ? '. New #1!' : ''}</span>`, e.color);
     });
   }
   lastSeen = Math.max(lastSeen || 0, newest);
@@ -189,6 +211,7 @@ function ensureDialog() {
         <div class="money"><span id="bd-sym"></span><input id="bd-amt" type="number" inputmode="numeric" min="1" step="1" required></div>
       </label>
       <div class="chips" id="bd-chips"></div>
+      <p class="fine" id="bd-cur"></p>
       <label>Your name on the board <small>(optional)</small>
         <input id="bd-backer" maxlength="24" autocomplete="nickname" placeholder="Anonymous fan">
       </label>
@@ -196,7 +219,7 @@ function ensureDialog() {
         <input id="bd-msg" maxlength="80" autocomplete="off" placeholder="Your move.">
       </label>
       <p class="err" id="bd-err" role="alert"></p>
-      <p class="fine">You're paying for a spot on a public leaderboard. There's no prize and payments aren't refundable. Fan-made site, not linked to any team, league, artist or studio.</p>
+      <p class="fine">You're buying a paid public shoutout on a fan leaderboard. There's no prize or reward, and payments aren't refundable. Fan-made site, not linked to any team, league, artist or studio.</p>
       <div class="dlg-actions">
         <button class="btn ghost" value="cancel" formnovalidate>Cancel</button>
         <button class="btn gold" id="bd-pay" value="pay">Pay</button>
@@ -215,25 +238,27 @@ export async function openBid({ board, contender, leaderTotal, isNew }) {
   const pay = $('#bd-pay');
   $('#bd-err').textContent = '';
   $('#bd-sym').textContent = cfg.symbol;
-  $('#bd-min').textContent = `(minimum ${money(cfg.minBid)})`;
+  $('#bd-min').textContent = `(minimum ${fmtIn(cfg.minBid, cfg.currency)})`;
+  $('#bd-cur').innerHTML = cfg.canSwitch ? (cfg.currency === 'INR' ? 'Paying from outside India? <button type="button" class="linkbtn" data-cur="USD">Pay in $ instead</button>' : 'Paying from India? <button type="button" class="linkbtn" data-cur="INR">Pay in ₹ with UPI</button>') : '';
+  $('#bd-cur').onclick = (e) => { const c = e.target.dataset.cur; if (c) switchCurrency(c); };
   $('#bd-newwrap').hidden = !isNew;
   $('#bd-crest').innerHTML = isNew ? `<div class="crest-new">+</div>` : crest(contender, 54);
-  const takeAmt = isNew ? leaderTotal + 1 : Math.max(cfg.minBid, leaderTotal - (contender?.total || 0) + 1);
+  const takeAmt = Math.max(cfg.minBid, pointsToCash(isNew ? leaderTotal + 1 : leaderTotal - (contender?.total || 0) + 1));
   const isKing = !isNew && contender && contender.rank === 1 && contender.total > 0;
   if (isNew) {
     $('#bd-title').textContent = 'Add someone';
     $('#bd-sub').textContent = `They join ${board.name} with whatever you pay.`;
   } else {
     $('#bd-title').textContent = `Back ${contender.name}`;
-    $('#bd-sub').textContent = isKing ? 'Already #1. Make the lead bigger.' : `${money(takeAmt)} puts them on the throne.`;
+    $('#bd-sub').textContent = isKing ? 'Already #1. Make the lead bigger.' : `${fmtIn(takeAmt, cfg.currency)} puts them on the throne.`;
   }
-  const presets = [...new Set([cfg.minBid, cfg.currency === 'INR' ? 100 : 5, cfg.currency === 'INR' ? 500 : 20])].filter((v) => v !== takeAmt);
-  $('#bd-chips').innerHTML = (isKing ? '' : `<button type="button" class="chip take" data-v="${takeAmt}">Take #1: ${money(takeAmt)}</button>`)
-    + presets.map((v) => `<button type="button" class="chip" data-v="${v}">${money(v)}</button>`).join('');
+  const presets = [...new Set(cfg.currency === 'INR' ? [cfg.minBid, 199, 499, 999] : [cfg.minBid, 10, 25])].filter((v) => v !== takeAmt && v >= cfg.minBid);
+  $('#bd-chips').innerHTML = (isKing ? '' : `<button type="button" class="chip take" data-v="${takeAmt}">Take #1: ${fmtIn(takeAmt, cfg.currency)}</button>`)
+    + presets.map((v) => `<button type="button" class="chip" data-v="${v}">${fmtIn(v, cfg.currency)}</button>`).join('');
   $('#bd-chips').onclick = (e) => { const v = e.target.dataset.v; if (v) { amt.value = v; sync(); } };
   amt.min = cfg.minBid;
   amt.value = isKing ? cfg.minBid : takeAmt;
-  const sync = () => { pay.textContent = `Pay ${money(parseInt(amt.value, 10) || 0)}`; };
+  const sync = () => { pay.textContent = `Pay ${fmtIn(parseInt(amt.value, 10) || 0, cfg.currency)}`; };
   amt.oninput = sync; sync();
   pay.disabled = false;
 
@@ -241,7 +266,7 @@ export async function openBid({ board, contender, leaderTotal, isNew }) {
     if (e.submitter && e.submitter.value === 'cancel') return;
     e.preventDefault();
     const body = {
-      board: board.id, amount: parseInt(amt.value, 10),
+      board: board.id, amount: parseInt(amt.value, 10), currency: cfg.currency,
       backer: $('#bd-backer').value.trim(), message: $('#bd-msg').value.trim(),
     };
     if (isNew) body.newName = $('#bd-new').value.trim(); else body.contenderId = contender.id;
